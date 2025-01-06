@@ -38,7 +38,7 @@
 
 /* Display name for logging */
 static const char* PLUGIN_DISPLAY_NAME = PLUGIN_NAME;
-#define PLUGIN_URI "https://github.com/bradholland/sf2lv2/" PLUGIN_NAME
+#define PLUGIN_URI "https://github.com/islainstruments/sf2lv2/" PLUGIN_NAME
 
 /* Audio processing buffer size */
 #define BUFFER_SIZE 64
@@ -603,4 +603,4 @@ const LV2_Descriptor* lv2_descriptor(uint32_t index)
     return (index == 0) ? &descriptor : NULL;
 }
 
-// ... rest of the code ...
+

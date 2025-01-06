@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
 
     // Write plugin definition
     fprintf(ttl,
-        "<https://github.com/bradholland/sf2lv2/%s>\n"
+        "<https://github.com/islainstruments/sf2lv2/%s>\n"
         "    a lv2:InstrumentPlugin, lv2:Plugin ;\n"
         "    lv2:requiredFeature <http://lv2plug.in/ns/ext/urid#map> ;\n"
         "    lv2:port [\n"
