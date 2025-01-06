@@ -7,8 +7,6 @@ CFLAGS = -Wall -fPIC `pkg-config --cflags fluidsynth`
 LDFLAGS = `pkg-config --libs fluidsynth`
 
 # Project configuration
-# These can be overridden from command line:
-# make PLUGIN_NAME=YourPlugin SF2_FILE=YourSound.sf2
 PLUGIN_NAME ?= SF2LV2-Default
 SF2_FILE ?= soundfont.sf2
 
@@ -22,23 +20,66 @@ METADATA_GEN = src/ttl_generator.c
 PLUGIN_SRC = src/synth_plugin.c
 
 # Phony targets (not files)
-.PHONY: all clean install
+.PHONY: all clean install interactive build_plugin clean_plugin
 
-# Default target
+# Default target is now interactive
+.DEFAULT_GOAL := interactive
+
+# Interactive build process
+interactive:
+	@clear
+	@$(MAKE) --no-print-directory intro
+	@echo "\033[1;34m=== SF2LV2 Interactive Build ===\033[0m"
+	@echo -n "\033[1;32mEnter SoundFont filename (.sf2): \033[0m"; \
+	read sf2_file; \
+	echo -n "\033[1;32mEnter plugin name: \033[0m"; \
+	read plugin_name; \
+	echo -n "\033[1;32mInstall to system after build? (y/n): \033[0m"; \
+	read install_choice; \
+	if [ ! -f "$$sf2_file" ]; then \
+		echo "\033[1;31mError: SoundFont file '$$sf2_file' not found\033[0m"; \
+		exit 1; \
+	fi; \
+	$(MAKE) --no-print-directory clean_plugin PLUGIN_NAME="$$plugin_name" > /dev/null; \
+	if [ "$$install_choice" = "y" ] || [ "$$install_choice" = "Y" ]; then \
+		$(MAKE) --no-print-directory build_plugin PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file" && \
+		$(MAKE) --no-print-directory install PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file"; \
+	else \
+		$(MAKE) --no-print-directory build_plugin PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file"; \
+	fi
+
+# Clean only specific plugin directory
+clean_plugin:
+	@if [ -d "$(PLUGIN_DIR)" ]; then \
+		echo "Cleaning plugin directory: $(PLUGIN_DIR)"; \
+		rm -rf "$(PLUGIN_DIR)"; \
+	fi
+
+# Clean everything (only when explicitly called)
+clean:
+	@echo "Cleaning all build artifacts..."
+	@rm -rf $(BUILD_DIR)
+	@rm -f *.ttl
+	@echo "Clean complete"
+
+# Silent build target for interactive mode
+build_plugin: $(PLUGIN_DIR)/$(PLUGIN_NAME).so $(PLUGIN_DIR)/metadata
+	@echo "Build complete: $(PLUGIN_DIR)"
+
+# Normal build target with logo
 all: intro $(PLUGIN_DIR)/$(PLUGIN_NAME).so $(PLUGIN_DIR)/metadata
 	@echo "Build complete: $(PLUGIN_DIR)"
 
-
 # Display intro message
 intro:
-	@echo "\033[1;31m _  ________        ___    _           _                                  _"
-	@echo "| ||  ____  |      /   |  | |         | |                                | |"
-	@echo "| || |___ | |     / /| |  | |_ __  ___| |_ _ __ _   _ _ __ __  ___  _ __ | |_ ___"
-	@echo "| ||___  || |    / / | |  | | '_ \/ __|  _| '__| | | | '_ '_ \/ _ \| '_ \|  _/ __|"
-	@echo "| |____| || |___/ /  | |  | | | | \__ | |_| |  | |_/ | | || | | __/| | | | |_\__ \\"
-	@echo "|________||______/   |_|  |_|_| |_|___\\___|_|  \\___,_|_| || |_\\___||_| |_\\___|___/\033[0m"
+	@echo "\033[1;31m _  ________        \033[38;5;203m___    _           _                                  _\033[0m"
+	@echo "\033[1;31m| ||  ____  |      \033[38;5;203m/   |  | |         | |                                | |\033[0m"
+	@echo "\033[1;31m| || |___ | |     \033[38;5;203m/ /| |  | |_ __  ___| |_ _ __ _   _ _ __ __  ___  _ __ | |_ ___\033[0m"
+	@echo "\033[1;31m| ||___  || |    \033[38;5;203m/ / | |  | | '_ \/ __|  _| '__| | | | '_ '_ \/ _ \| '_ \|  _/ __|\033[0m"
+	@echo "\033[1;31m| |____| || |___\033[38;5;203m/ /  | |  | | | | \__ | |_| |  | |_/ | | || | | __/| | | | |_\__ \\\033[0m"
+	@echo "\033[1;31m|________||______\033[38;5;203m/   |_|  |_|_| |_|___\\___|_|  \\___,_|_| || |_\\___||_| |_\\___|___/\033[0m"
 	@echo "\033[1;37m                     SF2LV2 Soundfont Plugin Creator v1.0 2025-01-06\033[0m"
-	@echo 
+	@echo
 
 # Create build directory
 $(BUILD_DIR):
@@ -72,10 +113,3 @@ install: all
 	@sudo mkdir -p $(INSTALL_DIR)/$(PLUGIN_NAME).lv2
 	@sudo cp -r $(PLUGIN_DIR)/* $(INSTALL_DIR)/$(PLUGIN_NAME).lv2/
 	@echo "Installation complete"
-
-# Clean build artifacts
-clean:
-	@echo "Cleaning build directory..."
-	@rm -rf $(BUILD_DIR)
-	@rm -f *.ttl
-	@echo "Clean complete"

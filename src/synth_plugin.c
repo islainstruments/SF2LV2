@@ -303,10 +303,10 @@ LV2_Handle instantiate(const LV2_Descriptor* descriptor,
     // Set up cutoff modulator
     fluid_mod_t* mod = new_fluid_mod();
     fluid_mod_set_source1(mod, CC_CUTOFF, 
-                         FLUID_MOD_CC | FLUID_MOD_LINEAR | FLUID_MOD_UNIPOLAR | FLUID_MOD_POSITIVE);
+                         FLUID_MOD_CC | FLUID_MOD_UNIPOLAR | FLUID_MOD_LINEAR | FLUID_MOD_POSITIVE);
     fluid_mod_set_source2(mod, 0, 0);
     fluid_mod_set_dest(mod, GEN_FILTERFC);
-    fluid_mod_set_amount(mod, -8000.0f);  // Increased range for more dramatic filter sweep
+    fluid_mod_set_amount(mod, -8000.0f);  
     fluid_synth_add_default_mod(plugin->synth, mod, FLUID_SYNTH_ADD);
     delete_fluid_mod(mod);
     
@@ -316,7 +316,7 @@ LV2_Handle instantiate(const LV2_Descriptor* descriptor,
                          FLUID_MOD_CC | FLUID_MOD_UNIPOLAR | FLUID_MOD_CONCAVE | FLUID_MOD_POSITIVE);
     fluid_mod_set_source2(mod, 0, 0);
     fluid_mod_set_dest(mod, GEN_FILTERQ);
-    fluid_mod_set_amount(mod, 900.0f);  // Adjusted for 16-bit audio (90dB range)
+    fluid_mod_set_amount(mod, 860.0f);  // Adjusted for optimal range
     fluid_synth_add_default_mod(plugin->synth, mod, FLUID_SYNTH_ADD);
     delete_fluid_mod(mod);
     
@@ -479,10 +479,10 @@ void run(LV2_Handle instance,
     
     // Handle control changes
     if (plugin->controls_initialized) {
-        // Cutoff (inverted control)
+        // Cutoff (with inversion)
         if (*plugin->cutoff_port != plugin->prev_cutoff) {
-            float inverted_cutoff = 1.0f - *plugin->cutoff_port;
-            int cc_value = (int)(inverted_cutoff * 127.0f);
+            float inverted = 1.0f - *plugin->cutoff_port;  // Invert the 0-1 range
+            int cc_value = (int)(inverted * 127.0f);       // Convert to MIDI CC range
             fluid_synth_cc(plugin->synth, 0, CC_CUTOFF, cc_value);
             plugin->prev_cutoff = *plugin->cutoff_port;
         }
@@ -568,7 +568,7 @@ void run(LV2_Handle instance,
                     break;
                 case 0xE0:  // Pitch Bend
                     fluid_synth_pitch_bend(plugin->synth, 0,
-                        ((msg[2] << 7) | msg[1]) - 8192);
+                        (msg[2] << 7) | msg[1]);
                     break;
             }
         }
