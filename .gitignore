@@ -1,3 +1,16 @@
+# Build artifacts
+build/
 *.o
 *.so
-*.log
+
+# SoundFont files
+*.sf2
+*.SF2
+
+# OS specific
+.DS_Store
+.vscode/
+*~
+
+# Generated files
+*.ttl
