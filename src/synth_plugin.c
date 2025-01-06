@@ -44,12 +44,12 @@ static const char* PLUGIN_DISPLAY_NAME = PLUGIN_NAME;
 #define BUFFER_SIZE 64
 
 /* MIDI CC numbers for sound parameters */
-#define CC_CUTOFF    74  // Filter cutoff/brightness (Sound Controller 5)
-#define CC_RESONANCE 71  // Filter resonance/timbre (Sound Controller 2)
-#define CC_ATTACK    73  // Envelope attack time
-#define CC_DECAY     75  // Envelope decay time (Sound Controller 6)
-#define CC_SUSTAIN   70  // Envelope sustain level (Sound Controller 1)
-#define CC_RELEASE   72  // Envelope release time
+#define CC_CUTOFF    21  // Filter cutoff frequency control
+#define CC_RESONANCE 22  // Filter resonance control
+#define CC_ATTACK    23  // Envelope attack time control
+#define CC_DECAY     24  // Envelope decay time control
+#define CC_SUSTAIN   25  // Envelope sustain level control
+#define CC_RELEASE   26  // Envelope release time control
 
 /* Structure to store bank/program pairs for SoundFont presets */
 typedef struct {

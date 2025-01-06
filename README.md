@@ -49,6 +49,23 @@ sudo make install PLUGIN_NAME=YourPluginName SF2_FILE=YourSoundFont.sf2
 3. Install the plugin
 4. The plugin will appear in your LV2 host as "YourPluginName"
 
+### Control Parameters
+
+The plugin provides several real-time control parameters that can be automated or controlled via MIDI CC messages:
+
+- **Level**: Master volume control (0.0 to 2.0)
+- **Program**: Preset selection from the SoundFont
+- **Filter Controls**:
+  - Cutoff (CC 21): Controls the filter cutoff frequency
+  - Resonance (CC 22): Controls the filter resonance
+- **ADSR Envelope**:
+  - Attack (CC 23): Controls the attack time
+  - Decay (CC 24): Controls the decay time
+  - Sustain (CC 25): Controls the sustain level
+  - Release (CC 26): Controls the release time
+
+All MIDI CC controls range from 0-127 and can be automated through your DAW or controlled via external MIDI controllers.
+
 ## Technical Details
 
 ### Build Process
@@ -86,6 +103,8 @@ Common issues and solutions:
 1. **Missing SoundFont**: Ensure .sf2 file is in project root
 2. **Build Errors**: Check FluidSynth and LV2 development packages
 3. **Installation Issues**: Verify write permissions to /usr/lib/lv2/
+4. **No Sound**: Check if the correct preset is selected and MIDI channel is set to 1
+5. **Controls Not Working**: Ensure your DAW is sending MIDI CC messages on channel 1
 
 ## License
 
