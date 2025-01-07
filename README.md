@@ -102,15 +102,6 @@ build/
       └── [SF2_FILE]        (Copied SoundFont)
 ```
 
-## Troubleshooting
-
-Common issues and solutions:
-1. **Missing SoundFont**: Ensure .sf2 file is in project root
-2. **Build Errors**: Check FluidSynth and LV2 development packages
-3. **Installation Issues**: Verify write permissions to /usr/lib/lv2/
-4. **No Sound**: Check if the correct preset is selected and MIDI channel is set to 1
-5. **Controls Not Working**: Ensure your DAW is sending MIDI CC messages on channel 1
-
 ## License
 
 MIT License - See LICENSE file for details. This is a permissive license that lets people do anything they want with the code as long as they provide attribution back to you and don't hold you liable.
