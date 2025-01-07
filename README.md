@@ -2,6 +2,11 @@
 
 A tool for converting SoundFont (.sf2) files into LV2 plugins, specifically designed for use with the Isla Instruments S2400/Caladan but compatible with any LV2 host.
 
+<img width="1207" alt="image" src="https://github.com/user-attachments/assets/233b3548-0817-4aa9-9692-eb29e586a789" />
+
+
+
+
 ## Overview
 
 SF2LV2 converts SoundFont (.sf2) files into fully functional LV2 plugins with:
