@@ -104,7 +104,7 @@ build/
 
 ## License
 
-MIT License - See LICENSE file for details. This is a permissive license that lets people do anything they want with the code as long as they provide attribution back to you and don't hold you liable.
+MIT License - See LICENSE file for details.
 
 ## Credits
 
