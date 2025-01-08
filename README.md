@@ -35,24 +35,8 @@ SF2LV2 converts SoundFont (.sf2) files into fully functional LV2 plugins with:
 
 ### Build Commands
 
-Build with specific SoundFont and plugin name:
-```bash
-make clean && make PLUGIN_NAME=YourPluginName SF2_FILE=YourSoundFont.sf2
-```
-
-### Installation
-
-Install to system LV2 directory:
-```bash
-sudo make install PLUGIN_NAME=YourPluginName SF2_FILE=YourSoundFont.sf2
-```
-
-## Usage
-
-1. Place your .sf2 file in the project root directory
-2. Build the plugin with appropriate PLUGIN_NAME and SF2_FILE
-3. Install the plugin
-4. The plugin will appear in your LV2 host as "YourPluginName"
+Just run 'make' the build process is interactive allowing you to enter your source .sf2 file and chosen plugin name. 
+Additionaly, you can choose to install to the system LV2 folder.
 
 ### Control Parameters
 
