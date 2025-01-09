@@ -64,15 +64,6 @@ The plugin provides several real-time control parameters that can be automated o
 
 All MIDI CC controls range from 0-127 and can be automated through your DAW or controlled via external MIDI controllers.
 
-### Program Changes and CC Behavior
-
-When changing programs:
-1. All notes are stopped
-2. All CCs are reset to specific values:
-   - Cutoff is set to maximum (127)
-   - All other CCs (resonance, ADSR) are set to 0
-3. The new program is loaded with these initial CC values
-
 ### Debug Output
 
 The plugin includes a debug mode that can be enabled by setting `plugin->debug = true` in the code. When enabled, it outputs:
@@ -124,4 +115,4 @@ MIT License - See LICENSE file for details.
 - **LV2** ([lv2plug.in](https://lv2plug.in/))  
   A portable plugin standard for audio systems. LV2 provides the plugin architecture and host interface, enabling integration with digital audio workstations and other audio software.
 
-- Created by Brad Holland/Isla Instruments ([www.islainstruments.com](https://www.islainstruments.com)) with significant assistance from Claude AI & ChatGPT
+- Created by Brad Holland/Isla Instruments ([www.islainstruments.com](https://www.islainstruments.com)) with assistance from Claude AI & ChatGPT
