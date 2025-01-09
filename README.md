@@ -12,18 +12,20 @@ A tool for converting SoundFont (.sf2) files into LV2 plugins, specifically desi
 SF2LV2 converts SoundFont (.sf2) files into fully functional LV2 plugins with:
 - MIDI input support
 - Stereo audio output
-- Real-time time control over Filters and Envelopes.
-- Full preset name display.
+- Real-time control over Filters and Envelopes (when properly configured in the SoundFont)
+- Full preset name display
 - Bank and program change support
 
 ## Features
 
 - **Preset Management**: All SoundFont presets are available through the Program selector
-- **Sound Shaping**:
+- **Sound Shaping** (requires proper modulator setup in the SoundFont):
   - Cutoff: Filter frequency control 
   - Resonance: Filter resonance control 
   - ADSR Envelope: Attack, Decay, Sustain, Release controls
 - **Level Control**: Master volume control 
+
+**Important Note**: The filter and envelope controls will only affect the sound if the appropriate modulators are set up in the SoundFont file. You can easily configure these modulators using [Polyphone](https://www.polyphone-soundfonts.com/), a free SoundFont editor.
 
 ## Building
 
@@ -35,8 +37,8 @@ SF2LV2 converts SoundFont (.sf2) files into fully functional LV2 plugins with:
 
 ### Build Commands
 
-Just run 'make' the build process is interactive allowing you to enter your source .sf2 file and chosen plugin name. 
-Additionaly, you can choose to install to the system LV2 folder.
+Just run 'make' - the build process is interactive allowing you to enter your source .sf2 file and chosen plugin name. 
+Additionally, you can choose to install to the system LV2 folder.
 
 ### Control Parameters
 
@@ -45,15 +47,32 @@ The plugin provides several real-time control parameters that can be automated o
 - **Level**: Master volume control (0.0 to 2.0)
 - **Program**: Preset selection from the SoundFont
 - **Filter Controls**:
-  - Cutoff (CC 21): Controls the filter cutoff frequency
-  - Resonance (CC 22): Controls the filter resonance
+  - Cutoff (CC 74): Controls the filter cutoff frequency
+  - Resonance (CC 71): Controls the filter resonance
 - **ADSR Envelope**:
-  - Attack (CC 23): Controls the attack time
-  - Decay (CC 24): Controls the decay time
-  - Sustain (CC 25): Controls the sustain level
-  - Release (CC 26): Controls the release time
+  - Attack (CC 73): Controls the attack time
+  - Decay (CC 75): Controls the decay time
+  - Sustain (CC 70): Controls the sustain level
+  - Release (CC 72): Controls the release time
 
 All MIDI CC controls range from 0-127 and can be automated through your DAW or controlled via external MIDI controllers.
+
+### Program Changes and CC Behavior
+
+When changing programs:
+1. All notes are stopped
+2. All CCs are reset to specific values:
+   - Cutoff is set to maximum (127)
+   - All other CCs (resonance, ADSR) are set to 0
+3. The new program is loaded with these initial CC values
+
+### Debug Output
+
+The plugin includes a debug mode that can be enabled by setting `plugin->debug = true` in the code. When enabled, it outputs:
+- SoundFont loading information
+- Available presets and their bank/program numbers
+- Program changes with bank/program details
+- CC value comparisons between the plugin's state and FluidSynth's internal state
 
 ## Technical Details
 
