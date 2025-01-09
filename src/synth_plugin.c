@@ -96,6 +96,9 @@ typedef struct {
     float* sustain_port;   // Sustain level
     float* release_port;   // Release time
 
+    // Debug flag
+    bool debug;           // Enable debug output
+
     // FluidSynth instances
     fluid_settings_t* settings;  // FluidSynth settings
     fluid_synth_t* synth;       // FluidSynth synthesizer
@@ -111,17 +114,12 @@ typedef struct {
     double rate;          // Sample rate
 
     // Parameter tracking
-    float last_cutoff;     // Previous cutoff value
-    float last_resonance;  // Previous resonance value
     float prev_cutoff;     // Last sent cutoff value
     float prev_resonance;  // Last sent resonance value
     float prev_attack;     // Last sent attack value
     float prev_decay;      // Last sent decay value
     float prev_sustain;    // Last sent sustain value
     float prev_release;    // Last sent release value
-    bool controls_touched[6];  // Flags for modified controls
-    bool controls_initialized; // Whether controls are initialized
-    bool preset_just_changed; // Flag for preset change
 } Plugin;
 
 /*
@@ -132,7 +130,9 @@ static int load_soundfont(Plugin* plugin) {
     // Construct path to SoundFont file
     char sf_path[4096];
     snprintf(sf_path, sizeof(sf_path), "%s/%s", plugin->bundle_path, SF2_FILE);
-    fprintf(stderr, "Loading soundfont from: %s\n", sf_path);
+    if (plugin->debug) {
+        fprintf(stderr, "Loading soundfont from: %s\n", sf_path);
+    }
     
     // Load the SoundFont
     plugin->sfont_id = fluid_synth_sfload(plugin->synth, sf_path, 1);
@@ -158,7 +158,9 @@ static int load_soundfont(Plugin* plugin) {
         }
     }
 
-    fprintf(stderr, "Found %zu total presets in soundfont\n", preset_count);
+    if (plugin->debug) {
+        fprintf(stderr, "Found %zu total presets in soundfont\n", preset_count);
+    }
     plugin->program_count = preset_count;
 
     // Allocate memory for preset storage
@@ -176,8 +178,10 @@ static int load_soundfont(Plugin* plugin) {
             if (preset != NULL) {
                 plugin->programs[idx].bank = bank;
                 plugin->programs[idx].prog = prog;
-                fprintf(stderr, "Stored program %d: bank=%d prog=%d name=%s\n",
-                        idx, bank, prog, fluid_preset_get_name(preset));
+                if (plugin->debug) {
+                    fprintf(stderr, "Stored program %d: bank=%d prog=%d name=%s\n",
+                            idx, bank, prog, fluid_preset_get_name(preset));
+                }
                 idx++;
             }
         }
@@ -198,8 +202,10 @@ static void map_uris(LV2_URID_Map* map, URIDs* uris) {
  */
 static void handle_program_change(Plugin* plugin, int program) {
     if (program < 0 || program >= plugin->program_count) {
-        fprintf(stderr, "Invalid program number: %d (max: %d)\n", 
-                program, plugin->program_count - 1);
+        if (plugin->debug) {
+            fprintf(stderr, "Invalid program number: %d (max: %d)\n", 
+                    program, plugin->program_count - 1);
+        }
         return;
     }
 
@@ -210,33 +216,60 @@ static void handle_program_change(Plugin* plugin, int program) {
     int bank = plugin->programs[program].bank;
     int prog = plugin->programs[program].prog;
 
-    fprintf(stderr, "Changing to program %d (bank:%d prog:%d)\n", 
-            program, bank, prog);
-
-    // Send bank select first
-    fluid_synth_bank_select(plugin->synth, 0, bank);
-    
-    // Ensure bank change is processed
-    fluid_synth_sfont_select(plugin->synth, 0, plugin->sfont_id);
-    
-    // Then send program change
-    int result = fluid_synth_program_change(plugin->synth, 0, prog);
-    
-    if (result != FLUID_OK) {
-        fprintf(stderr, "Failed to change program: bank=%d prog=%d\n", bank, prog);
+    if (plugin->debug) {
+        fprintf(stderr, "Changing to program %d (bank:%d prog:%d)\n", 
+                program, bank, prog);
     }
 
-    // Reset all CC values to 0
-    fluid_synth_cc(plugin->synth, 0, CC_CUTOFF, 0);
+    // Reset CCs (cutoff to max, others to 0)
+    fluid_synth_cc(plugin->synth, 0, CC_CUTOFF, 127);    // Cutoff fully open
     fluid_synth_cc(plugin->synth, 0, CC_RESONANCE, 0);
     fluid_synth_cc(plugin->synth, 0, CC_ATTACK, 0);
     fluid_synth_cc(plugin->synth, 0, CC_DECAY, 0);
     fluid_synth_cc(plugin->synth, 0, CC_SUSTAIN, 0);
     fluid_synth_cc(plugin->synth, 0, CC_RELEASE, 0);
 
-    // Reset control states
-    memset(plugin->controls_touched, 0, sizeof(plugin->controls_touched));
-    plugin->preset_just_changed = true;
+    // Send bank select first
+    fluid_synth_bank_select(plugin->synth, 0, bank);
+    
+    // Then send program change
+    int result = fluid_synth_program_change(plugin->synth, 0, prog);
+    
+    if (result != FLUID_OK) {
+        if (plugin->debug) {
+            fprintf(stderr, "Failed to change program: bank=%d prog=%d\n", bank, prog);
+        }
+    }
+
+    if (plugin->debug) {
+        // Debug output comparing plugin values vs FluidSynth values
+        int cc_value;
+        fprintf(stderr, "CC values after program change (Plugin vs FluidSynth):\n");
+        
+        fluid_synth_get_cc(plugin->synth, 0, CC_CUTOFF, &cc_value);
+        fprintf(stderr, "  Cutoff (CC%d):    Plugin=%d, FluidSynth=%d\n", 
+                CC_CUTOFF, (int)(plugin->prev_cutoff * 127.0f), cc_value);
+        
+        fluid_synth_get_cc(plugin->synth, 0, CC_RESONANCE, &cc_value);
+        fprintf(stderr, "  Resonance (CC%d): Plugin=%d, FluidSynth=%d\n", 
+                CC_RESONANCE, (int)(plugin->prev_resonance * 127.0f), cc_value);
+        
+        fluid_synth_get_cc(plugin->synth, 0, CC_ATTACK, &cc_value);
+        fprintf(stderr, "  Attack (CC%d):    Plugin=%d, FluidSynth=%d\n", 
+                CC_ATTACK, (int)(plugin->prev_attack * 127.0f), cc_value);
+        
+        fluid_synth_get_cc(plugin->synth, 0, CC_DECAY, &cc_value);
+        fprintf(stderr, "  Decay (CC%d):     Plugin=%d, FluidSynth=%d\n", 
+                CC_DECAY, (int)(plugin->prev_decay * 127.0f), cc_value);
+        
+        fluid_synth_get_cc(plugin->synth, 0, CC_SUSTAIN, &cc_value);
+        fprintf(stderr, "  Sustain (CC%d):   Plugin=%d, FluidSynth=%d\n", 
+                CC_SUSTAIN, (int)(plugin->prev_sustain * 127.0f), cc_value);
+        
+        fluid_synth_get_cc(plugin->synth, 0, CC_RELEASE, &cc_value);
+        fprintf(stderr, "  Release (CC%d):   Plugin=%d, FluidSynth=%d\n", 
+                CC_RELEASE, (int)(plugin->prev_release * 127.0f), cc_value);
+    }
 }
 
 /*
@@ -254,6 +287,9 @@ LV2_Handle instantiate(const LV2_Descriptor* descriptor,
     if (!plugin) {
         return NULL;
     }
+
+    // Initialize debug flag (set to false by default)
+    plugin->debug = false;
     
     // Get host features
     for (int i = 0; features[i]; ++i) {
@@ -300,66 +336,6 @@ LV2_Handle instantiate(const LV2_Descriptor* descriptor,
         return NULL;
     }
     
-    // Set up cutoff modulator
-    fluid_mod_t* mod = new_fluid_mod();
-    fluid_mod_set_source1(mod, CC_CUTOFF, 
-                         FLUID_MOD_CC | FLUID_MOD_UNIPOLAR | FLUID_MOD_LINEAR | FLUID_MOD_POSITIVE);
-    fluid_mod_set_source2(mod, 0, 0);
-    fluid_mod_set_dest(mod, GEN_FILTERFC);
-    fluid_mod_set_amount(mod, -8000.0f);  
-    fluid_synth_add_default_mod(plugin->synth, mod, FLUID_SYNTH_ADD);
-    delete_fluid_mod(mod);
-    
-    // Set up resonance modulator
-    mod = new_fluid_mod();
-    fluid_mod_set_source1(mod, CC_RESONANCE,
-                         FLUID_MOD_CC | FLUID_MOD_UNIPOLAR | FLUID_MOD_CONCAVE | FLUID_MOD_POSITIVE);
-    fluid_mod_set_source2(mod, 0, 0);
-    fluid_mod_set_dest(mod, GEN_FILTERQ);
-    fluid_mod_set_amount(mod, 860.0f);  // Adjusted for optimal range
-    fluid_synth_add_default_mod(plugin->synth, mod, FLUID_SYNTH_ADD);
-    delete_fluid_mod(mod);
-    
-    // Set up attack modulator
-    mod = new_fluid_mod();
-    fluid_mod_set_source1(mod, CC_ATTACK,
-                         FLUID_MOD_CC | FLUID_MOD_LINEAR | FLUID_MOD_UNIPOLAR | FLUID_MOD_POSITIVE);
-    fluid_mod_set_source2(mod, 0, 0);
-    fluid_mod_set_dest(mod, GEN_VOLENVATTACK);
-    fluid_mod_set_amount(mod, 20000.0f);  // Envelope time range in timecents
-    fluid_synth_add_default_mod(plugin->synth, mod, FLUID_SYNTH_ADD);
-    delete_fluid_mod(mod);
-    
-    // Set up decay modulator
-    mod = new_fluid_mod();
-    fluid_mod_set_source1(mod, CC_DECAY,
-                         FLUID_MOD_CC | FLUID_MOD_LINEAR | FLUID_MOD_UNIPOLAR | FLUID_MOD_POSITIVE);
-    fluid_mod_set_source2(mod, 0, 0);
-    fluid_mod_set_dest(mod, GEN_VOLENVDECAY);
-    fluid_mod_set_amount(mod, 20000.0f);  // Envelope time range in timecents
-    fluid_synth_add_default_mod(plugin->synth, mod, FLUID_SYNTH_ADD);
-    delete_fluid_mod(mod);
-    
-    // Set up sustain modulator
-    mod = new_fluid_mod();
-    fluid_mod_set_source1(mod, CC_SUSTAIN,
-                         FLUID_MOD_CC | FLUID_MOD_UNIPOLAR | FLUID_MOD_CONCAVE | FLUID_MOD_POSITIVE);
-    fluid_mod_set_source2(mod, 0, 0);
-    fluid_mod_set_dest(mod, GEN_VOLENVSUSTAIN);
-    fluid_mod_set_amount(mod, 1000.0f);  // Sustain level range (0-1000)
-    fluid_synth_add_default_mod(plugin->synth, mod, FLUID_SYNTH_ADD);
-    delete_fluid_mod(mod);
-    
-    // Set up release modulator
-    mod = new_fluid_mod();
-    fluid_mod_set_source1(mod, CC_RELEASE,
-                         FLUID_MOD_CC | FLUID_MOD_LINEAR | FLUID_MOD_UNIPOLAR | FLUID_MOD_POSITIVE);
-    fluid_mod_set_source2(mod, 0, 0);
-    fluid_mod_set_dest(mod, GEN_VOLENVRELEASE);
-    fluid_mod_set_amount(mod, 20000.0f);  // Envelope time range in timecents
-    fluid_synth_add_default_mod(plugin->synth, mod, FLUID_SYNTH_ADD);
-    delete_fluid_mod(mod);
-    
     // Load and initialize the SoundFont
     if (load_soundfont(plugin) < 0) {
         delete_fluid_synth(plugin->synth);
@@ -368,14 +344,6 @@ LV2_Handle instantiate(const LV2_Descriptor* descriptor,
         free(plugin);
         return NULL;
     }
-    
-    // Initialize all CC values to 0
-    fluid_synth_cc(plugin->synth, 0, CC_CUTOFF, 0);
-    fluid_synth_cc(plugin->synth, 0, CC_RESONANCE, 0);
-    fluid_synth_cc(plugin->synth, 0, CC_ATTACK, 0);
-    fluid_synth_cc(plugin->synth, 0, CC_DECAY, 0);
-    fluid_synth_cc(plugin->synth, 0, CC_SUSTAIN, 0);
-    fluid_synth_cc(plugin->synth, 0, CC_RELEASE, 0);
     
     // Allocate audio processing buffers
     plugin->buffer_l = (float*)calloc(BUFFER_SIZE, sizeof(float));
@@ -392,11 +360,14 @@ LV2_Handle instantiate(const LV2_Descriptor* descriptor,
     
     // Initialize plugin state
     plugin->current_program = -1;
-    plugin->last_cutoff = -1;
-    plugin->last_resonance = -1;
-    plugin->controls_initialized = false;
-    plugin->preset_just_changed = false;
-    memset(plugin->controls_touched, 0, sizeof(plugin->controls_touched));
+    
+    // Initialize prev values to match TTL defaults
+    plugin->prev_cutoff = 0.0f;     // TTL default 1.0
+    plugin->prev_resonance = 0.0f;   // TTL default 0.0
+    plugin->prev_attack = 0.0f;      // TTL default 0.0
+    plugin->prev_decay = 0.0f;       // TTL default 0.0
+    plugin->prev_sustain = 0.0f;     // TTL default 0.0
+    plugin->prev_release = 0.0f;     // TTL default 0.0
     
     fprintf(stderr, "Plugin instantiated successfully\n");
     return (LV2_Handle)plugin;
@@ -461,87 +432,58 @@ void activate(LV2_Handle instance)
 /*
  * Process audio and handle events for one cycle
  */
-void run(LV2_Handle instance,
-    uint32_t sample_count)
+void run(LV2_Handle instance, uint32_t sample_count)
 {
     Plugin* plugin = (Plugin*)instance;
 
-    // Initialize controls if needed
-    if (!plugin->controls_initialized && !plugin->preset_just_changed) {
-        plugin->prev_cutoff = *plugin->cutoff_port;
-        plugin->prev_resonance = *plugin->resonance_port;
-        plugin->prev_attack = *plugin->attack_port;
-        plugin->prev_decay = *plugin->decay_port;
-        plugin->prev_sustain = *plugin->sustain_port;
-        plugin->prev_release = *plugin->release_port;
-        plugin->controls_initialized = true;
-    }
-    
-    // Handle control changes
-    if (plugin->controls_initialized) {
-        // Cutoff (with inversion)
-        if (*plugin->cutoff_port != plugin->prev_cutoff) {
-            float inverted = 1.0f - *plugin->cutoff_port;  // Invert the 0-1 range
-            int cc_value = (int)(inverted * 127.0f);       // Convert to MIDI CC range
-            fluid_synth_cc(plugin->synth, 0, CC_CUTOFF, cc_value);
-            plugin->prev_cutoff = *plugin->cutoff_port;
-        }
-
-        // Resonance
-        if (*plugin->resonance_port != plugin->prev_resonance) {
-            int cc_value = (int)(*plugin->resonance_port * 127.0f);
-            fluid_synth_cc(plugin->synth, 0, CC_RESONANCE, cc_value);
-            plugin->prev_resonance = *plugin->resonance_port;
-        }
-
-        // Attack
-        if (*plugin->attack_port != plugin->prev_attack) {
-            int cc_value = (int)(*plugin->attack_port * 127.0f);
-            fluid_synth_cc(plugin->synth, 0, CC_ATTACK, cc_value);
-            plugin->prev_attack = *plugin->attack_port;
-        }
-
-        // Decay
-        if (*plugin->decay_port != plugin->prev_decay) {
-            int cc_value = (int)(*plugin->decay_port * 127.0f);
-            fluid_synth_cc(plugin->synth, 0, CC_DECAY, cc_value);
-            plugin->prev_decay = *plugin->decay_port;
-        }
-
-        // Sustain
-        if (*plugin->sustain_port != plugin->prev_sustain) {
-            int cc_value = (int)(*plugin->sustain_port * 127.0f);
-            fluid_synth_cc(plugin->synth, 0, CC_SUSTAIN, cc_value);
-            plugin->prev_sustain = *plugin->sustain_port;
-        }
-
-        // Release
-        if (*plugin->release_port != plugin->prev_release) {
-            int cc_value = (int)(*plugin->release_port * 127.0f);
-            fluid_synth_cc(plugin->synth, 0, CC_RELEASE, cc_value);
-            plugin->prev_release = *plugin->release_port;
-        }
-    }
-    
-    plugin->preset_just_changed = false;
-    
-    // Handle program changes
+    // Handle program changes first
     if (plugin->program_port) {
         int new_program = (int)(*plugin->program_port + 0.5);
         if (new_program != plugin->current_program && new_program >= 0) {
             handle_program_change(plugin, new_program);
             plugin->current_program = new_program;
-            
-            // Update previous values to match current port values
-            plugin->prev_cutoff = *plugin->cutoff_port;
-            plugin->prev_resonance = *plugin->resonance_port;
-            plugin->prev_attack = *plugin->attack_port;
-            plugin->prev_decay = *plugin->decay_port;
-            plugin->prev_sustain = *plugin->sustain_port;
-            plugin->prev_release = *plugin->release_port;
+            goto process_audio;
         }
     }
 
+    // Process control changes - only send CC if control moved
+    if (*plugin->cutoff_port != plugin->prev_cutoff) {
+        int cc_value = (int)(*plugin->cutoff_port * 127.0f);
+        fluid_synth_cc(plugin->synth, 0, CC_CUTOFF, cc_value);
+        plugin->prev_cutoff = *plugin->cutoff_port;
+    }
+
+    if (*plugin->resonance_port != plugin->prev_resonance) {
+        int cc_value = (int)(*plugin->resonance_port * 127.0f);
+        fluid_synth_cc(plugin->synth, 0, CC_RESONANCE, cc_value);
+        plugin->prev_resonance = *plugin->resonance_port;
+    }
+
+    if (*plugin->attack_port != plugin->prev_attack) {
+        int cc_value = (int)(*plugin->attack_port * 127.0f);
+        fluid_synth_cc(plugin->synth, 0, CC_ATTACK, cc_value);
+        plugin->prev_attack = *plugin->attack_port;
+    }
+
+    if (*plugin->decay_port != plugin->prev_decay) {
+        int cc_value = (int)(*plugin->decay_port * 127.0f);
+        fluid_synth_cc(plugin->synth, 0, CC_DECAY, cc_value);
+        plugin->prev_decay = *plugin->decay_port;
+    }
+
+    if (*plugin->sustain_port != plugin->prev_sustain) {
+        int cc_value = (int)(*plugin->sustain_port * 127.0f);
+        fluid_synth_cc(plugin->synth, 0, CC_SUSTAIN, cc_value);
+        plugin->prev_sustain = *plugin->sustain_port;
+    }
+
+    if (*plugin->release_port != plugin->prev_release) {
+        int cc_value = (int)(*plugin->release_port * 127.0f);
+        fluid_synth_cc(plugin->synth, 0, CC_RELEASE, cc_value);
+        plugin->prev_release = *plugin->release_port;
+    }
+
+process_audio:
     // Handle level control
     if (plugin->level_port) {
         float level = *plugin->level_port;

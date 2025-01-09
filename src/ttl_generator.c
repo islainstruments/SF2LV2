@@ -294,7 +294,7 @@ int main(int argc, char** argv) {
         "        lv2:index 5 ;\n"
         "        lv2:symbol \"cutoff\" ;\n"
         "        lv2:name \"Cutoff\" ;\n"
-        "        lv2:default 0.5 ;\n"
+        "        lv2:default 1.0 ;\n"
         "        lv2:minimum 0.0 ;\n"
         "        lv2:maximum 1.0 ;\n"
         "        rdfs:comment \"Maps to MIDI CC 74 (Brightness)\" ;\n"
@@ -303,7 +303,7 @@ int main(int argc, char** argv) {
         "        lv2:index 6 ;\n"
         "        lv2:symbol \"resonance\" ;\n"
         "        lv2:name \"Resonance\" ;\n"
-        "        lv2:default 0.5 ;\n"
+        "        lv2:default 0.0 ;\n"
         "        lv2:minimum 0.0 ;\n"
         "        lv2:maximum 1.0 ;\n"
         "        rdfs:comment \"Maps to MIDI CC 71 (Resonance)\" ;\n"
@@ -357,7 +357,7 @@ int main(int argc, char** argv) {
         "    rdfs:comment \"This plugin wraps the %s soundfont as an LV2 instrument.\\nBuilt using FluidSynth as the synthesizer engine.\" ;\n"
         "    lv2:minorVersion 2 ;\n"
         "    lv2:microVersion 0 .\n",
-        display_name, display_name
+        PLUGIN_NAME, display_name
     );
 
     fclose(ttl);
