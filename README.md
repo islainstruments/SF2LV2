@@ -37,8 +37,15 @@ SF2LV2 converts SoundFont (.sf2) files into fully functional LV2 plugins with:
 
 ### Build Commands
 
-Just run 'make' - the build process is interactive allowing you to enter your source .sf2 file and chosen plugin name. 
-Additionally, you can choose to install to the system LV2 folder.
+Just run 'make' - the build process is interactive allowing you to:
+1. Choose between batch processing all .sf2 files in the directory or processing a single file
+2. If processing a single file:
+   - Enter your source .sf2 file and chosen plugin name
+   - Choose whether to install to the system LV2 folder
+3. If batch processing:
+   - All .sf2 files in the current directory will be processed
+   - Each plugin will be named after its source file (without the .sf2 extension)
+   - Choose whether to install all plugins to the system LV2 folder
 
 ### Control Parameters
 

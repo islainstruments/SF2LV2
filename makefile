@@ -30,23 +30,57 @@ interactive:
 	@clear
 	@$(MAKE) --no-print-directory intro
 	@echo "\033[1;34m=== SF2LV2 Interactive Build ===\033[0m"
-	@echo -n "\033[1;32mEnter SoundFont filename (.sf2): \033[0m"; \
-	read sf2_file; \
-	echo -n "\033[1;32mEnter plugin name: \033[0m"; \
-	read plugin_name; \
-	echo -n "\033[1;32mInstall to system after build? (y/n): \033[0m"; \
-	read install_choice; \
-	if [ ! -f "$$sf2_file" ]; then \
-		echo "\033[1;31mError: SoundFont file '$$sf2_file' not found\033[0m"; \
-		exit 1; \
-	fi; \
-	$(MAKE) --no-print-directory clean_plugin PLUGIN_NAME="$$plugin_name" > /dev/null; \
-	if [ "$$install_choice" = "y" ] || [ "$$install_choice" = "Y" ]; then \
-		$(MAKE) --no-print-directory build_plugin PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file" && \
-		$(MAKE) --no-print-directory install PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file"; \
+	@echo -n "\033[1;32mWould you like to batch process all available .sf2 files? (y/n): \033[0m"; \
+	read batch_choice; \
+	if [ "$$batch_choice" = "y" ] || [ "$$batch_choice" = "Y" ]; then \
+		echo -n "\033[1;32mInstall all plugins to system after build? (y/n): \033[0m"; \
+		read install_choice; \
+		for sf2_file in *.sf2; do \
+			if [ -f "$$sf2_file" ]; then \
+				plugin_name=$${sf2_file%.sf2}; \
+				echo "\033[1;34mProcessing: $$sf2_file -> $$plugin_name\033[0m"; \
+				$(MAKE) --no-print-directory clean_plugin PLUGIN_NAME="$$plugin_name" > /dev/null; \
+				if [ "$$install_choice" = "y" ] || [ "$$install_choice" = "Y" ]; then \
+					$(MAKE) --no-print-directory build_plugin PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file" && \
+					$(MAKE) --no-print-directory install PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file" || exit 1; \
+				else \
+					$(MAKE) --no-print-directory build_plugin PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file" || exit 1; \
+				fi; \
+			fi; \
+		done; \
+		echo "\033[1;32mBatch processing complete!\033[0m"; \
 	else \
-		$(MAKE) --no-print-directory build_plugin PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file"; \
+		echo -n "\033[1;32mEnter SoundFont filename (.sf2): \033[0m"; \
+		read sf2_file; \
+		echo -n "\033[1;32mEnter plugin name: \033[0m"; \
+		read plugin_name; \
+		echo -n "\033[1;32mInstall to system after build? (y/n): \033[0m"; \
+		read install_choice; \
+		if [ ! -f "$$sf2_file" ]; then \
+			echo "\033[1;31mError: SoundFont file '$$sf2_file' not found\033[0m"; \
+			exit 1; \
+		fi; \
+		$(MAKE) --no-print-directory clean_plugin PLUGIN_NAME="$$plugin_name" > /dev/null; \
+		if [ "$$install_choice" = "y" ] || [ "$$install_choice" = "Y" ]; then \
+			$(MAKE) --no-print-directory build_plugin PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file" && \
+			$(MAKE) --no-print-directory install PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file"; \
+		else \
+			$(MAKE) --no-print-directory build_plugin PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file"; \
+		fi \
 	fi
+
+# Batch process target
+batch_process:
+	@echo "\033[1;34m=== Processing all .sf2 files ===\033[0m"
+	@for sf2_file in *.sf2; do \
+		if [ -f "$$sf2_file" ]; then \
+			plugin_name=$${sf2_file%.sf2}; \
+			echo "\033[1;32mProcessing: $$sf2_file -> $$plugin_name\033[0m"; \
+			$(MAKE) --no-print-directory clean_plugin PLUGIN_NAME="$$plugin_name" > /dev/null; \
+			$(MAKE) --no-print-directory build_plugin PLUGIN_NAME="$$plugin_name" SF2_FILE="$$sf2_file" || exit 1; \
+		fi \
+	done
+	@echo "\033[1;32mBatch processing complete!\033[0m"
 
 # Clean only specific plugin directory
 clean_plugin:
